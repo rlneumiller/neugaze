@@ -1,0 +1,145 @@
+# Configuration
+
+neugaze is configured with `/etc/neugaze/config.toml`.
+
+Most users only need to change camera source or security level.
+
+## Default config
+
+```toml
+[security]
+level = "medium"
+
+[cameras]
+rgb = "primary"
+dark_threshold = 0.6
+dark_pixel_value = 10
+
+[auth]
+abort_if_ssh = true
+abort_if_lid_closed = true
+
+[enrollment]
+max_templates = 3
+
+[liveness]
+enabled = true
+threshold = 0.8
+max_frames = 40
+```
+
+## Change security level
+
+`level` (under `[security]`) controls model choice and match strictness.
+
+| Level | Detector | Recognizer | Threshold | Notes |
+|---|---|---|---|---|
+| `low` | SCRFD-500M | MobileFaceNet | 0.30 | Fastest |
+| `medium` | SCRFD-500M | MobileFaceNet | 0.40 | Default |
+| `high` | SCRFD-10G | ResNet50 | 0.50 | More accurate |
+| `maximum` | SCRFD-10G | ResNet50 | 0.60 | Most strict |
+| `custom` | n/a | n/a | n/a | See below |
+
+Practical guidance:
+
+- `medium`: best starting point for most laptops
+- `high`: use when false positives are unacceptable
+- `low`: use on weaker hardware when speed is critical
+
+### Custom level
+
+```toml
+[security]
+level = "custom"
+detector = "det_10g.onnx"
+recognizer = "w600k_r50.onnx"
+threshold = 0.55
+```
+
+## Select Camera Source
+
+The default camera source is:
+
+```toml
+[cameras]
+rgb = "primary"
+```
+
+`primary` uses GStreamer `pipewiresrc`. To pin neugaze to a specific PipeWire camera, use `neugaze config` or set `rgb` to a GStreamer source:
+
+```toml
+[cameras]
+rgb = "pipewiresrc target-object=<pipewire-target>"
+```
+
+Direct `/dev/video*` paths are not supported.
+
+### Dark-frame rejection
+
+neugaze rejects frames that are too dark before running face detection:
+
+```toml
+[cameras]
+dark_threshold = 0.6
+dark_pixel_value = 10
+```
+
+With the defaults, a frame is skipped when at least 60% of pixels have luminance below 10.
+
+## Authentication aborts
+
+neugaze skips face authentication in sessions where the camera is unlikely or unsafe to use:
+
+```toml
+[auth]
+abort_if_ssh = true
+abort_if_lid_closed = true
+```
+
+`abort_if_ssh` detects SSH sessions from the DBus caller process environment. `abort_if_lid_closed` reads ACPI lid state when available and is ignored on systems without a lid sensor.
+
+After changing config:
+
+```bash
+sudo systemctl restart neugazed
+```
+
+## Storage paths
+
+Storage locations are managed by the service setup and are not intended to be changed in config:
+
+- User embeddings: `/var/lib/neugaze/users`
+- Downloaded models: `/var/cache/neugaze`
+
+Models are auto-downloaded on first run if missing.
+
+## Enrollment behavior
+
+```toml
+[enrollment]
+max_templates = 3
+```
+
+Increase this if auth is unreliable in varied lighting.
+
+## Liveness Anti-Spoofing
+
+```toml
+[liveness]
+enabled = true
+threshold = 0.8
+max_frames = 40
+```
+
+When enabled, neugaze runs a local MiniFASNet-V2 anti-spoofing model on the detected face crop after a recognition match. Authentication succeeds only when the face matches and either one frame reaches `threshold` or the best few frames show sustained near-threshold liveness.
+
+`max_frames` caps how many valid face frames neugaze will try before returning no match.
+
+## Recommended tuning workflow
+
+1. Start with `[security] level = "medium"`
+2. Enroll one profile: `neugaze add-face default`
+3. Test 5 to 10 times using `neugaze auth --verbose`
+4. If photo or screen spoofing is a concern, keep `[liveness] enabled = true`
+5. If false accepts are too high, switch to `high`
+6. If false rejects are too high, run `neugaze refine-face default`

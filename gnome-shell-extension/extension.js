@@ -1,0 +1,219 @@
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as Util from 'resource:///org/gnome/shell/gdm/util.js';
+
+const FACE_SERVICE_NAME = 'gdm-face';
+const EXTENSION_SCHEMA_ID = 'org.gnome.shell.extensions.neugaze';
+const FACE_AUTHENTICATION_KEY = 'enable-face-authentication';
+const MAX_TRIES_KEY = 'max-face-tries';
+const FACE_ERROR_TIMEOUT_WAIT = 15;
+
+const GENERIC_ERROR_MAP = new Map([
+    ['Sorry, that did not work. Please try again.',
+        'Sorry, face authentication did not work. Please try again.'],
+    ['Sorry, that didn\u2019t work. Please try again.',
+        'Sorry, face authentication did not work. Please try again.'],
+    ['You reached the maximum authentication attempts, please try another method',
+        'You reached the maximum face authentication attempts, please try another method'],
+]);
+
+const FACE_STATUS_UPDATES = new Set([
+    'No faces detected. Please look at the camera...',
+    'Face is clipped. Please move fully into frame...',
+    'Please center your face...',
+]);
+
+function clearFaceFailureTimeout(verifier) {
+    if (verifier._gazeFaceFailedId) {
+        GLib.source_remove(verifier._gazeFaceFailedId);
+        verifier._gazeFaceFailedId = 0;
+    }
+}
+
+export default class GazeFaceAuthExtension extends Extension {
+    enable() {
+        this._injectionManager = new InjectionManager();
+        this._extensionSettings = new Gio.Settings({schema_id: EXTENSION_SCHEMA_ID});
+
+        const proto = Util.ShellUserVerifier.prototype;
+        const extensionSettings = this._extensionSettings;
+
+        const getFaceEnabled = () => extensionSettings.get_boolean(FACE_AUTHENTICATION_KEY);
+        const getMaxTries = () => Math.max(1, extensionSettings.get_int(MAX_TRIES_KEY));
+
+        this._injectionManager.overrideMethod(proto, '_updateEnabledServices',
+            original => {
+                return function () {
+                    original.call(this);
+                    this._faceEnabled = getFaceEnabled();
+                    this._faceMaxTries = getMaxTries();
+                };
+            });
+
+        this._injectionManager.overrideMethod(proto, '_beginVerification',
+            original => {
+                return function () {
+                    original.call(this);
+
+                    this._faceEnabled = getFaceEnabled();
+                    this._faceMaxTries = getMaxTries();
+
+                    if (this._userName && this._faceEnabled && !this.serviceIsForeground(FACE_SERVICE_NAME))
+                        this._startService(FACE_SERVICE_NAME);
+                };
+            });
+
+        proto.serviceIsFace = function (serviceName) {
+            return this._faceEnabled && serviceName === FACE_SERVICE_NAME;
+        };
+
+        proto.serviceIsBiometric = function (serviceName) {
+            return (this.serviceIsFace(serviceName) || this.serviceIsFingerprint(serviceName)) &&
+                !this.serviceIsForeground(serviceName);
+        };
+
+        proto._canFaceRetry = function () {
+            return this._userName &&
+                (this._reauthOnly || this._failCounter < (this._faceMaxTries ?? 1));
+        };
+
+        proto._getHint = function () {
+            const faceActive = this._activeServices.has(FACE_SERVICE_NAME);
+            const fpActive = this._activeServices.has(Util.FINGERPRINT_SERVICE_NAME);
+
+            if (faceActive && fpActive) {
+                return this._fingerprintReaderType === 2
+                    ? '(or look at the camera or swipe finger)'
+                    : '(or look at the camera or place finger on reader)';
+            }
+
+            if (faceActive)
+                return '(or look at the camera)';
+
+            if (fpActive) {
+                return this._fingerprintReaderType === 2
+                    ? '(or swipe finger across reader)'
+                    : '(or place finger on reader)';
+            }
+
+            return null;
+        };
+
+        this._injectionManager.overrideMethod(proto, '_onConversationStarted',
+            original => {
+                return function (client, serviceName) {
+                    original.call(this, client, serviceName);
+
+                    if (this.serviceIsBiometric(serviceName)) {
+                        const hint = this._getHint();
+                        if (hint) {
+                            this._filterServiceMessages(serviceName, Util.MessageType.HINT);
+                            this._queueMessage(serviceName, hint, Util.MessageType.HINT);
+                        }
+                    }
+                };
+            });
+
+        this._injectionManager.overrideMethod(proto, '_onInfo',
+            original => {
+                return function (client, serviceName, info) {
+                    if (this.serviceIsFace(serviceName)) {
+                        const text = info?.trim();
+                        if (!text || !FACE_STATUS_UPDATES.has(text))
+                            return;
+
+                        this._filterServiceMessages(serviceName, Util.MessageType.HINT);
+                        this._queueMessage(serviceName, text, Util.MessageType.HINT);
+                        return;
+                    }
+
+                    if (this.serviceIsBiometric(serviceName))
+                        return;
+
+                    original.call(this, client, serviceName, info);
+                };
+            });
+
+        this._injectionManager.overrideMethod(proto, '_onProblem',
+            original => {
+                return function (client, serviceName, problem) {
+                    if (this.serviceIsFace(serviceName)) {
+                        const mapped = GENERIC_ERROR_MAP.get(problem) ?? problem;
+                        this._queuePriorityMessage(serviceName, mapped, Util.MessageType.ERROR);
+
+                        this._failCounter++;
+
+                        if (!this._canFaceRetry()) {
+                            clearFaceFailureTimeout(this);
+
+                            const cancellable = this._cancellable;
+                            this._gazeFaceFailedId = GLib.timeout_add_once(GLib.PRIORITY_DEFAULT,
+                                FACE_ERROR_TIMEOUT_WAIT, () => {
+                                    this._gazeFaceFailedId = 0;
+                                    if (cancellable && !cancellable.is_cancelled()) {
+                                        this._verificationFailed(serviceName, false)
+                                            .catch(error => logError(error, '[neugaze] Failed to stop face auth after max tries'));
+                                    }
+                                });
+                        }
+
+                        return;
+                    }
+
+                    original.call(this, client, serviceName, problem);
+                };
+            });
+
+        this._injectionManager.overrideMethod(proto, '_onConversationStopped',
+            original => {
+                return function (client, serviceName) {
+                    original.call(this, client, serviceName);
+
+                    if (this.serviceIsBiometric(serviceName)) {
+                        const hint = this._getHint();
+                        if (hint) {
+                            const bgSvc = [...this._activeServices].find(s =>
+                                this.serviceIsBiometric(s)
+                            );
+
+                            if (bgSvc) {
+                                this._filterServiceMessages(bgSvc, Util.MessageType.HINT);
+                                this._queueMessage(bgSvc, hint, Util.MessageType.HINT);
+                            }
+                        }
+                    }
+                };
+            });
+
+        this._injectionManager.overrideMethod(proto, '_onReset',
+            original => {
+                return function () {
+                    clearFaceFailureTimeout(this);
+                    original.call(this);
+                };
+            });
+
+        this._injectionManager.overrideMethod(proto, '_verificationFailed',
+            original => {
+                return async function (serviceName, shouldRetry) {
+                    if (serviceName === FACE_SERVICE_NAME)
+                        clearFaceFailureTimeout(this);
+
+                    return original.call(this, serviceName, shouldRetry);
+                };
+            });
+    }
+
+    disable() {
+        const proto = Util.ShellUserVerifier.prototype;
+        delete proto.serviceIsFace;
+        delete proto.serviceIsBiometric;
+        delete proto._canFaceRetry;
+        delete proto._getHint;
+
+        this._injectionManager.clear();
+        this._injectionManager = null;
+        this._extensionSettings = null;
+    }
+}

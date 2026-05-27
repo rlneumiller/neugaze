@@ -1,0 +1,20 @@
+{
+    "name": "Neugaze",
+    "description": "Adds face authentication support to the GDM login and lock screen using the Neugaze facial recognition daemon.",
+    "uuid": "neugaze@example.com",
+    "shell-version": [
+    	"50",
+        "49",
+        "48",
+        "47",
+        "46",
+        "45"
+    ],
+    "session-modes": [
+        "user",
+        "unlock-dialog",
+        "gdm"
+    ],
+    "settings-schema": "org.gnome.shell.extensions.neugaze",
+    "url": "https://neugaze.example.com"
+}

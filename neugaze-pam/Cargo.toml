@@ -1,0 +1,15 @@
+[package]
+name = "pam-neugaze"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+pam-neugaze-core = { path = "../pam-neugaze-core" }
+neugaze-core = { path = "../neugaze-core" }
+libc = "0.2"
+zbus = "5.15"
+tokio = { version = "1.52.3", features = ["full"] }
+futures = "0.3.32"
