@@ -4,91 +4,76 @@ This page describes how to use a Debian 13 GNOME Wayland VM for safe neugaze dev
 
 ## VM setup script
 
-A helper script is included at `scripts/neugaze-vm-setup.sh`.
-It prepares the VM image directory, downloads the Debian 13 netinst ISO, creates a sparse QCOW2 disk, and activates the libvirt `default` network.
+A helper script is included at `scripts/neugaze-vm-run.sh`.
+It prepares the VM image directory, downloads the Debian 13 netinst ISO if needed, creates the QCOW2 disk, and then:
+
+- if the disk does not yet contain Debian, launches an automated preseeded installer
+  that installs GNOME, the native neugaze build dependencies, and `rustup`
+- if the disk already contains Debian, boots the installed VM directly
 
 ### Run the script
 
 ```bash
-chmod +x scripts/neugaze-vm-setup.sh
-./scripts/neugaze-vm-setup.sh
+chmod +x scripts/neugaze-vm-run.sh
+sudo ./scripts/neugaze-vm-run.sh
 ```
 
-That will prepare:
+The script uses `qemu-system-x86_64` directly and does not require libvirt.
 
-- `/var/lib/libvirt/images/neugaze/debian-13.5.0-amd64-netinst.iso`
-- `/var/lib/libvirt/images/neugaze/debian13-gnome-wayland.qcow2`
-- the libvirt `default` network, if it is defined but inactive
+### Optional settings
 
-If you want the script to launch the installer immediately, run:
+The following environment variables can override defaults:
 
-```bash
-./scripts/neugaze-vm-setup.sh --install
-```
+- `VM_NAME` — default `neugaze-debian13`
+- `IMAGE_DIR` — default `/var/lib/libvirt/images/neugaze`
+- `DISK_NAME` — default `neugaze-ready-debian13.qcow2`
+- `NEUGAZE_VM_USERNAME` — default `neugaze-user`
+- `NEUGAZE_VM_USER_PASSWORD` — default `neugaze-user-password`
+
+If the VM disk already contains Debian, re-running the same script boots that VM again.
 
 ## Installing Debian GNOME
 
-The script creates the VM disk and ISO and prints the `virt-install` command to start the installer.
-Use the installer UI to install a standard Debian desktop and choose GNOME.
-Wayland is the default GNOME session on Debian.
+The script performs a non-interactive automated Debian install whenever the VM disk is empty.
+The installer is preseeded to choose:
+
+- `en_US.UTF-8` locale
+- US keyboard layout
+- guided LVM partitioning on the full disk
+- GNOME desktop with the required build dependencies
+
+After the installer finishes, the VM powers off and the script exits.
 
 ## Starting the VM after installation
 
-After installation completes and the guest shuts down, start the VM again from the host:
+After the first run completes, start the VM again by rerunning the same script:
 
 ```bash
-virsh start neugaze-debian13
+sudo ./scripts/neugaze-vm-run.sh
 ```
 
-Then connect to the VM using a graphical tool such as `virt-manager` or `virt-viewer`, or use the libvirt console from your desktop environment.
-
-With `virt-viewer`, run it as root because it needs access to the guest display:
-
-```bash
-sudo virt-viewer neugaze-debian13
-```
+This will detect the existing Debian install on the disk and boot it.
 
 The default guest login is:
 
-- username: `neu-user`
-- password: `neu-user-password`
-- root password: `password`
+- username: `neugaze-user`
+- password: `neugaze-user-password`
 
-If you changed the default VM name by setting `VM_NAME` before running `scripts/neugaze-vm-setup.sh`, use that name instead of `neugaze-debian13`.
+The installed user is configured as a sudo user; root login is disabled.
 
 ## Check whether the VM is running
 
-On the host, verify the VM state with:
+On the host, verify whether `qemu-system-x86_64` is running:
 
 ```bash
-virsh list --all
+pgrep -a qemu-system-x86_64
 ```
 
-Look for the VM name and confirm its state is `running`.
-
-If `virsh domstate neugaze-debian13` fails with `failed to get domain`, the VM name is probably different or the domain is not defined yet. Use `virsh list --all` to find the correct name.
-
-Alternatively, check a single domain directly:
-
-```bash
-virsh domstate neugaze-debian13
-```
-
-If it returns `running`, the VM is active.
+If you prefer to inspect the guest from inside the VM, use the guest's terminal or desktop environment after it boots.
 
 ## Build dependencies inside the VM
 
-After Debian is installed and you are logged in to the VM, install the native dependencies:
-
-```bash
-sudo apt update
-sudo apt install -y build-essential pkg-config clang libclang-dev \
-  libopencv-dev libv4l-dev libpam0g-dev \
-  libgtk-4-dev libadwaita-1-dev \
-  libcairo2-dev libglib2.0-dev libgdk-pixbuf-2.0-dev \
-  libpango1.0-dev libgraphene-1.0-dev \
-  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-```
+The VM setup script already installs the native Debian packages required for building `neugaze` as part of the automated Debian GNOME installation.
 
 ## Get the source and install
 

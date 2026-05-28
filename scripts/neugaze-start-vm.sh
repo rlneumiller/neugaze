@@ -1,1 +1,0 @@
-sudo qemu-system-x86_64 -name neugaze-debian13 -machine accel=kvm -smp 4 -m 8192 -drive file=/var/lib/libvirt/images/neugaze/debian13-gnome-wayland.qcow2,if=virtio,format=qcow2 -display gtk -vga qxl -nic user,model=virtio -device qemu-xhci -device usb-host,vendorid=0x046d,productid=0x0825
