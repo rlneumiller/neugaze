@@ -7,7 +7,7 @@ pub mod users;
 
 use crate::users::UserDatabase;
 use daemon::AuthDaemon;
-use gaze_core::config::{Config, MODELS_DIR, USERS_DIR};
+use neugaze_core::config::{Config, MODELS_DIR, USERS_DIR};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
     let (det_path, rec_path) =
         models::ensure_models(MODELS_DIR, security.detector(), security.recognizer())?;
 
-    let detector = gaze_core::detect::FaceDetector::new(det_path.to_str().unwrap())
+    let detector = neugaze_core::detect::FaceDetector::new(det_path.to_str().unwrap())
         .expect("Failed to load detection model");
 
     let recognizer = recognize::FaceRecognizer::new(rec_path.to_str().unwrap())
@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
 
     let db = UserDatabase::new(USERS_DIR, config.enrollment.max_templates as usize)?;
 
-    let checker = gaze_core::face::FaceChecker::from_detector_with_config(detector, &config);
+    let checker = neugaze_core::face::FaceChecker::from_detector_with_config(detector, &config);
 
     let daemon = AuthDaemon {
         checker: Arc::new(Mutex::new(checker)),

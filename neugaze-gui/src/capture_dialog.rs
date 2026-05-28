@@ -1,7 +1,7 @@
 use crate::camera_view::{CameraFeed, build_camera_widget};
 use futures::StreamExt;
-use gaze_core::config::Config;
-use gaze_core::dbus::{EnrollPrompt, GazeProxy};
+use neugaze_core::config::Config;
+use neugaze_core::dbus::{EnrollPrompt, NeuGazeProxy};
 use gtk4::glib;
 use gtk4::prelude::*;
 use libadwaita::prelude::*;
@@ -14,7 +14,7 @@ pub fn show_capture_dialog(
     parent: &impl IsA<gtk4::Widget>,
     username: &str,
     face_name: Option<&str>,
-    proxy: &Rc<GazeProxy<'static>>,
+    proxy: &Rc<NeuGazeProxy<'static>>,
     on_done: impl Fn() + 'static,
 ) {
     let config = Config::load().unwrap_or_default();

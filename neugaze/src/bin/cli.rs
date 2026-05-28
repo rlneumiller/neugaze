@@ -5,9 +5,9 @@ use clap::{Parser, Subcommand};
 use console::{Term, style};
 use dialoguer::{Confirm, Input, Select, theme::ColorfulTheme};
 use futures::StreamExt;
-use gaze_core::config::{Config, SecurityLevel};
-use gaze_core::dbus::{
-    CaptureStatus, EnrollPrompt, GazeProxy, VerifyResult, apply_config_to_daemon,
+use neugaze_core::config::{Config, SecurityLevel};
+use neugaze_core::dbus::{
+    CaptureStatus, EnrollPrompt, NeuGazeProxy, VerifyResult, apply_config_to_daemon,
     dbus_error_message, dbus_is_file_not_found, load_config_from_daemon,
 };
 use std::{future::Future, time::Duration};
@@ -136,7 +136,7 @@ enum Commands {
 
 async fn run_config_wizard(
     term: &Term,
-    proxy: &GazeProxy<'_>,
+    proxy: &NeuGazeProxy<'_>,
     mut config: Config,
 ) -> anyhow::Result<()> {
     let theme = ColorfulTheme::default();
@@ -205,7 +205,7 @@ async fn run_config_wizard(
         }
     };
 
-    let cameras = gaze_core::camera::enumerate_cameras().unwrap_or_default();
+    let cameras = neugaze_core::camera::enumerate_cameras().unwrap_or_default();
     if cameras.is_empty() {
         anyhow::bail!("No PipeWire cameras detected! Please ensure your video inputs are active.");
     }
@@ -265,7 +265,7 @@ async fn run_config_wizard(
 }
 
 async fn handle_enroll(
-    proxy: &GazeProxy<'_>,
+    proxy: &NeuGazeProxy<'_>,
     user: &str,
     face: &str,
     is_refine: bool,
@@ -408,7 +408,7 @@ async fn handle_enroll(
     Ok(())
 }
 
-async fn handle_auth(proxy: &GazeProxy<'_>, user: &str, verbose: bool) -> anyhow::Result<()> {
+async fn handle_auth(proxy: &NeuGazeProxy<'_>, user: &str, verbose: bool) -> anyhow::Result<()> {
     let term = Term::stdout();
     let start = std::time::Instant::now();
 
@@ -554,7 +554,7 @@ async fn handle_auth(proxy: &GazeProxy<'_>, user: &str, verbose: bool) -> anyhow
     Ok(())
 }
 
-async fn handle_list_faces(proxy: &GazeProxy<'_>, user: &str) -> anyhow::Result<()> {
+async fn handle_list_faces(proxy: &NeuGazeProxy<'_>, user: &str) -> anyhow::Result<()> {
     let term = Term::stdout();
     let result = run_busy(
         "Face database",
@@ -608,7 +608,7 @@ async fn handle_list_faces(proxy: &GazeProxy<'_>, user: &str) -> anyhow::Result<
     Ok(())
 }
 
-async fn handle_remove_face(proxy: &GazeProxy<'_>, user: &str, face: &str) -> anyhow::Result<()> {
+async fn handle_remove_face(proxy: &NeuGazeProxy<'_>, user: &str, face: &str) -> anyhow::Result<()> {
     let term = Term::stdout();
     let result = run_busy(
         "Remove face",
@@ -647,7 +647,7 @@ async fn handle_remove_face(proxy: &GazeProxy<'_>, user: &str, face: &str) -> an
 }
 
 async fn handle_rename_face(
-    proxy: &GazeProxy<'_>,
+    proxy: &NeuGazeProxy<'_>,
     user: &str,
     from: &str,
     to: &str,
@@ -690,7 +690,7 @@ async fn handle_rename_face(
     Ok(())
 }
 
-async fn handle_clear_user(proxy: &GazeProxy<'_>, user: &str) -> anyhow::Result<()> {
+async fn handle_clear_user(proxy: &NeuGazeProxy<'_>, user: &str) -> anyhow::Result<()> {
     let term = Term::stdout();
     let result = run_busy(
         "Clear user",
@@ -996,7 +996,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let conn = Connection::system().await?;
-    let proxy = GazeProxy::new(&conn).await?;
+    let proxy = NeuGazeProxy::new(&conn).await?;
 
     match cli.command {
         Commands::Auth { user, verbose } => {

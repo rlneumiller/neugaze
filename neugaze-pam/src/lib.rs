@@ -1,5 +1,5 @@
 #![allow(clippy::missing_safety_doc)]
-use pam_gaze_core::*;
+use neugaze_pam_core::*;
 use std::os::raw::{c_char, c_int};
 use std::time::Duration;
 use tokio::time::timeout;

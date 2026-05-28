@@ -111,12 +111,12 @@ pub fn dbus_is_file_not_found(err: &zbus::Error) -> bool {
     err.to_string().contains("FileNotFound")
 }
 
-pub async fn load_config_from_daemon(proxy: &GazeProxy<'_>) -> anyhow::Result<Config> {
+pub async fn load_config_from_daemon(proxy: &NeuGazeProxy<'_>) -> anyhow::Result<Config> {
     let map = proxy.get_config().await?;
     Config::from_map(map)
 }
 
-pub async fn apply_config_to_daemon(proxy: &GazeProxy<'_>, config: &Config) -> anyhow::Result<()> {
+pub async fn apply_config_to_daemon(proxy: &NeuGazeProxy<'_>, config: &Config) -> anyhow::Result<()> {
     proxy.set_config(config.to_map()).await?;
     Ok(())
 }
@@ -126,7 +126,7 @@ pub async fn apply_config_to_daemon(proxy: &GazeProxy<'_>, config: &Config) -> a
     default_service = "com.example.Neugaze",
     default_path = "/com/example/Neugaze"
 )]
-pub trait Neugaze {
+pub trait NeuGaze {
     async fn claim(&self, username: &str) -> zbus::Result<()>;
     async fn release(&self) -> zbus::Result<()>;
 

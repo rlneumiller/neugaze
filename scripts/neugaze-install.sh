@@ -112,13 +112,6 @@ install_pam_modules() {
     pam_dir=$(find_pam_dir) || die "Could not find a PAM security module directory."
     install -m 0755 "$(artifact libpam_neugaze.so)" "$pam_dir/pam_neugaze.so"
     printf 'installed: %s/pam_neugaze.so\n' "$pam_dir"
-
-    # Grosshack module is optional — only present when that crate is built.
-    grosshack="$(artifact libneugaze_pam_grosshack.so)"
-    if [ -f "$grosshack" ]; then
-        install -m 0755 "$grosshack" "$pam_dir/neugaze-pam-grosshack.so"
-        printf 'installed: %s/neugaze-pam-grosshack.so\n' "$pam_dir"
-    fi
 }
 
 create_runtime_dirs() {
@@ -412,7 +405,7 @@ do_uninstall() {
     done
 
     if [ -n "$pam_dir" ]; then
-        for mod in pam_neugaze.so neugaze-pam-grosshack.so; do
+        for mod in neugaze-pam.so; do
             f="$pam_dir/$mod"
             if [ -e "$f" ]; then
                 rm -f "$f"
@@ -468,7 +461,7 @@ show_status() {
 
     pam_dir=$(find_pam_dir 2>/dev/null || true)
     if [ -n "$pam_dir" ]; then
-        for mod in pam_neugaze.so neugaze-pam-grosshack.so; do
+        for mod in neugaze-pam.so; do
             f="$pam_dir/$mod"
             if [ -e "$f" ]; then
                 printf '  present: %s\n' "$f"

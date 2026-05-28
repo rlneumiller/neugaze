@@ -1,5 +1,5 @@
 [package]
-name = "pam-neugaze"
+name = "neugaze-pam"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,7 +7,7 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-pam-neugaze-core = { path = "../pam-neugaze-core" }
+neugaze-pam-core = { path = "../neugaze-pam-core" }
 neugaze-core = { path = "../neugaze-core" }
 libc = "0.2"
 zbus = "5.15"

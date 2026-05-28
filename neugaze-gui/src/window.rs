@@ -1,7 +1,7 @@
 use crate::capture_dialog;
-use gaze_core::config::{Config, DEFAULT_RGB_CAMERA, SecurityLevel};
-use gaze_core::dbus::{
-    GazeProxy, apply_config_to_daemon, dbus_error_message, dbus_is_file_not_found,
+use neugaze_core::config::{Config, DEFAULT_RGB_CAMERA, SecurityLevel};
+use neugaze_core::dbus::{
+    NeuGazeProxy, apply_config_to_daemon, dbus_error_message, dbus_is_file_not_found,
     load_config_from_daemon,
 };
 use gtk4::glib;
@@ -102,7 +102,7 @@ fn show_config_dialog(parent: &libadwaita::ApplicationWindow, overlay: &libadwai
     hardware_group.set_title("Hardware");
     page.add(&hardware_group);
 
-    let cameras = gaze_core::camera::enumerate_cameras()
+    let cameras = neugaze_core::camera::enumerate_cameras()
         .unwrap_or_else(|_| vec![("Primary Camera".to_string(), DEFAULT_RGB_CAMERA.to_string())]);
     let cam_names = cameras.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>();
 
@@ -206,7 +206,7 @@ fn show_config_dialog(parent: &libadwaita::ApplicationWindow, overlay: &libadwai
                 async move {
                     let result = async {
                         let conn = Connection::system().await?;
-                        let proxy = GazeProxy::new(&conn).await?;
+                        let proxy = NeuGazeProxy::new(&conn).await?;
                         apply_config_to_daemon(&proxy, &cfg_to_apply).await
                     }
                     .await;
@@ -395,7 +395,7 @@ fn show_config_dialog(parent: &libadwaita::ApplicationWindow, overlay: &libadwai
         async move {
             let load_result = async {
                 let conn = Connection::system().await?;
-                let proxy = GazeProxy::new(&conn).await?;
+                let proxy = NeuGazeProxy::new(&conn).await?;
                 load_config_from_daemon(&proxy).await
             }
             .await;
@@ -536,9 +536,9 @@ pub fn build_window(app: &libadwaita::Application, username: &str) {
                 return;
             };
 
-            let Ok(proxy) = GazeProxy::new(&conn).await else {
-                tracing::error!("Failed to create GazeProxy");
-                status_page.set_description(Some("Failed to create GazeProxy"));
+            let Ok(proxy) = NeuGazeProxy::new(&conn).await else {
+                tracing::error!("Failed to create NeuGazeProxy");
+                status_page.set_description(Some("Failed to create NeuGazeProxy"));
                 return;
             };
 
@@ -966,7 +966,7 @@ pub fn build_window(app: &libadwaita::Application, username: &str) {
                                 while let Some(signal) = stream.next().await {
                                     if let Ok(args) = signal.args() {
                                         let res = *args.result();
-                                        if res == gaze_core::dbus::VerifyResult::VerifyMatch {
+                                        if res == neugaze_core::dbus::VerifyResult::VerifyMatch {
                                             text = "✓ Authentication successful".to_string();
                                             let faces = args.faces();
                                             matched_face = faces.iter().find(|(_, _, _, p, _)| *p).map(|(n, _, _, _, _)| n.clone());

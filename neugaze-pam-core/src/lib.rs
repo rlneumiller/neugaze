@@ -3,7 +3,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_void};
 use std::ptr;
 
-use gaze_core::config::Config;
+use neugaze_core::config::Config;
 
 pub const PAM_SUCCESS: c_int = 0;
 pub const PAM_AUTH_ERR: c_int = 7;
@@ -108,13 +108,13 @@ pub fn is_retryable(err: &zbus::Error) -> bool {
     err.to_string().contains("RETRYABLE:")
 }
 
-use gaze_core::dbus::GazeProxy;
+use neugaze_core::dbus::NeuGazeProxy;
 pub use zbus::Connection;
 
-pub async fn setup_auth_env() -> Result<(Config, GazeProxy<'static>), c_int> {
+pub async fn setup_auth_env() -> Result<(Config, NeuGazeProxy<'static>), c_int> {
     let config = Config::load().map_err(|_| PAM_SERVICE_ERR)?;
     let conn = Connection::system().await.map_err(|_| PAM_SERVICE_ERR)?;
-    let proxy = GazeProxy::new(&conn).await.map_err(|_| PAM_SERVICE_ERR)?;
+    let proxy = NeuGazeProxy::new(&conn).await.map_err(|_| PAM_SERVICE_ERR)?;
     Ok((config, proxy))
 }
 
@@ -127,7 +127,7 @@ pub async fn has_enrolled_faces(username: &str) -> anyhow::Result<bool> {
 }
 
 struct ReleaseGuard {
-    proxy: GazeProxy<'static>,
+    proxy: NeuGazeProxy<'static>,
     active: bool,
 }
 
@@ -173,11 +173,11 @@ pub async fn authenticate_biometric(username: &str) -> anyhow::Result<Option<boo
     while let Some(signal) = status_stream.next().await {
         if let Ok(args) = signal.args() {
             match *args.result() {
-                gaze_core::dbus::VerifyResult::VerifyMatch => {
+                neugaze_core::dbus::VerifyResult::VerifyMatch => {
                     matched = true;
                     break;
                 }
-                gaze_core::dbus::VerifyResult::VerifyNoMatch => break,
+                neugaze_core::dbus::VerifyResult::VerifyNoMatch => break,
             }
         }
     }

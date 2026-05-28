@@ -1,6 +1,6 @@
-use gaze_core::camera::Camera;
-use gaze_core::capture::frame_to_bytes;
-use gaze_core::dbus::CaptureStatus;
+use neugaze_core::camera::Camera;
+use neugaze_core::capture::frame_to_bytes;
+use neugaze_core::dbus::CaptureStatus;
 use gtk4::gdk;
 use gtk4::glib;
 use gtk4::prelude::*;

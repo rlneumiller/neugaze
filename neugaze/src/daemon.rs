@@ -16,10 +16,10 @@ use crate::align::{align_face, mat_to_rgb};
 use crate::liveness::LivenessDetector;
 use crate::recognize::FaceRecognizer;
 use crate::users::{UserDatabase, UserDbError};
-use gaze_core::camera::Camera;
-use gaze_core::config::Config;
-use gaze_core::dbus::{CaptureStatus, EnrollPrompt, VerifyResult};
-use gaze_core::face::FaceChecker;
+use neugaze_core::camera::Camera;
+use neugaze_core::config::Config;
+use neugaze_core::dbus::{CaptureStatus, EnrollPrompt, VerifyResult};
+use neugaze_core::face::FaceChecker;
 
 const CONFIG_PATH: &str = "/etc/neugaze/config.toml";
 const POLKIT_ACTION_MANAGE_FACES: &str = "com.gundulabs.neugaze.manage-faces";
@@ -49,7 +49,7 @@ pub struct AuthDaemon {
     pub db: Arc<Mutex<UserDatabase>>,
     pub threshold: Arc<Mutex<f32>>,
     pub camera_config: Arc<Mutex<String>>,
-    pub liveness_config: Arc<Mutex<gaze_core::config::LivenessConfig>>,
+    pub liveness_config: Arc<Mutex<neugaze_core::config::LivenessConfig>>,
     pub abort_if_ssh: Arc<Mutex<bool>>,
     pub abort_if_lid_closed: Arc<Mutex<bool>>,
     pub claim_state: Arc<Mutex<Option<ClaimState>>>,
@@ -995,7 +995,7 @@ impl AuthDaemon {
             .map_err(|e| fdo::Error::Failed(format!("Invalid config: {e}")))?;
 
         let new_liveness_detector = if new_config.liveness.enabled {
-            let path = crate::models::ensure_liveness_model(gaze_core::config::MODELS_DIR)
+            let path = crate::models::ensure_liveness_model(neugaze_core::config::MODELS_DIR)
                 .map_err(|e| fdo::Error::Failed(format!("Failed to ensure liveness model: {e}")))?;
             Some(
                 LivenessDetector::new(path.to_str().unwrap()).map_err(|e| {
@@ -1040,7 +1040,7 @@ impl AuthDaemon {
         );
 
         let (det_path, rec_path) = match crate::models::ensure_models(
-            gaze_core::config::MODELS_DIR,
+            neugaze_core::config::MODELS_DIR,
             security.detector(),
             security.recognizer(),
         ) {
@@ -1048,7 +1048,7 @@ impl AuthDaemon {
             Err(e) => return Err(fdo::Error::Failed(format!("Failed to ensure models: {e}"))),
         };
 
-        match gaze_core::detect::FaceDetector::new(det_path.to_str().unwrap()) {
+        match neugaze_core::detect::FaceDetector::new(det_path.to_str().unwrap()) {
             Ok(det) => *checker = FaceChecker::from_detector_with_config(det, &new_config),
             Err(e) => return Err(fdo::Error::Failed(format!("Failed to load detector: {e}"))),
         }

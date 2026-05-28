@@ -4,8 +4,7 @@ members = [
     "neugaze-core",
     "neugaze-pam-core",
     "neugaze-pam",
-    "neugaze-pam-grosshack",
     "neugaze-gui",
 ]
-default-members = ["neugaze", "neugaze-pam", "neugaze-pam-grosshack", "neugaze-gui"]
+default-members = ["neugaze", "neugaze-pam", "neugaze-gui"]
 resolver = "3"

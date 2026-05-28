@@ -62,8 +62,7 @@ require_artifacts() {
         "$(artifact neugazed)" \
         "$(artifact neugaze)" \
         "$(artifact neugaze-gui)" \
-        "$(artifact libpam_gaze.so)" \
-        "$(artifact libneugaze-pam-grosshack.so)"
+        "$(artifact libpam_gaze.so)"
     do
         if [ ! -e "$file" ]; then
             printf 'Missing build artifact: %s\n' "$file" >&2
@@ -172,7 +171,6 @@ link_pam_dir() {
     dir=$1
     [ -d "$dir" ] || return 1
     backup_and_install "$(artifact libpam_gaze.so)" "$dir/pam_gaze.so" 0755
-    backup_and_install "$(artifact libneugaze-pam-grosshack.so)" "$dir/neugaze-pam-grosshack.so" 0755
     return 0
 }
 
@@ -193,7 +191,7 @@ link_pam_modules() {
             /lib//security|/usr/lib//security) continue ;;
         esac
 
-        if [ -e "$dir/pam_gaze.so" ] || [ -e "$dir/neugaze-pam-grosshack.so" ]; then
+        if [ -e "$dir/pam_gaze.so" ]; then
             link_pam_dir "$dir" && linked=1
         fi
     done
@@ -229,7 +227,6 @@ restore_pam_modules() {
             /lib//security|/usr/lib//security) continue ;;
         esac
         restore_or_remove "$dir/pam_gaze.so"
-        restore_or_remove "$dir/neugaze-pam-grosshack.so"
     done
 }
 
