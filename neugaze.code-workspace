@@ -1,0 +1,42 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Debug neugaze-gui",
+				"type": "lldb",
+				"request": "launch",
+				"program": "${workspaceFolder}/target/debug/neugaze-gui",
+				"cargo": {
+					"args": [
+						"build",
+						"--manifest-path",
+						"${workspaceFolder}/Cargo.toml",
+						"--bin=neugaze-gui",
+						"--package=neugaze-gui"
+					],
+					"filter": {
+						"name": "neugaze-gui",
+						"kind": "bin"
+					}
+				},
+				"cwd": "${workspaceFolder}",
+				"args": [],
+				"env": {
+					"RUST_LOG": "neugaze_gui=debug,info"
+				}
+			}
+		]
+	},
+	"extensions": {
+		"recommendations": [
+			"rust-lang.rust-analyzer",
+			"vadimcn.vscode-lldb"
+		]
+	}
+}
