@@ -60,6 +60,43 @@ The default guest login is:
 - password: `neugaze-user-password`
 
 The installed user is configured as a sudo user; root login is disabled.
+The VM also forwards guest SSH to host loopback only at `127.0.0.1:2222`, so the guest is reachable from the host but not exposed on the LAN.
+
+## VS Code Remote-SSH
+
+Fresh automated installs include `openssh-server`, so once the VM is booted you can connect from the host with:
+
+```bash
+ssh -p 2222 neugaze-user@127.0.0.1
+```
+### Add the host ssh config to enable vscode connection via Remote-ssh
+
+Add a host entry on the host machine by editing `~/.ssh/config` on the host, not inside the VM.
+If the SSH config does not exist yet, create it with restrictive permissions:
+
+```bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+touch ~/.ssh/config
+chmod 600 ~/.ssh/config
+```
+
+Then add this host entry:
+
+```sshconfig
+Host neugaze-vm
+  HostName 127.0.0.1
+  Port 2222
+  User neugaze-user
+```
+
+After saving the file, test the alias from the host:
+
+```bash
+ssh neugaze-vm
+```
+
+Then use VS Code Remote-SSH to connect to `neugaze-vm`.
 
 ## Check whether the VM is running
 

@@ -32,7 +32,7 @@ Creates a Debian 13 GNOME Wayland VM environment for neugaze development.
 Run without arguments to perform a fully automated one-step setup:
   - Downloads the Debian netinstall ISO if not present.
   - Creates a QCOW2 disk image if not present.
-  - Installs Debian with GNOME, all neugaze build dependencies, and rustup
+  - Installs Debian with a minimal GNOME desktop, all neugaze build dependencies, and rustup
     via preseeded automation.
   - If Debian is already installed on the disk, boots it instead.
 
@@ -192,9 +192,10 @@ d-i partman/choose_partition select finish
 d-i partman/confirm boolean true
 d-i partman/confirm_nooverwrite boolean true
 
-### Desktop + neugaze build dependencies
-tasksel tasksel/first multiselect gnome-desktop
-d-i pkgsel/include string build-essential pkg-config clang libclang-dev libopencv-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgtk-4-dev libadwaita-1-dev libglib2.0-dev libssl-dev curl git
+### Minimal GNOME desktop + neugaze build dependencies
+tasksel tasksel/first multiselect standard
+d-i base-installer/install-recommends boolean false
+d-i pkgsel/include string sudo network-manager gnome-core build-essential pkg-config clang libclang-dev libopencv-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgtk-4-dev libadwaita-1-dev libglib2.0-dev libssl-dev curl git openssh-server
 d-i pkgsel/upgrade select full-upgrade
 d-i pkgsel/update-policy select none
 
@@ -294,7 +295,7 @@ run_auto_install() {
     -drive "file=$IMAGE_DIR/$DISK_NAME,if=virtio,format=qcow2" \
     -display gtk \
     -vga qxl \
-    -nic user,model=virtio \
+    -nic user,model=virtio,hostfwd=tcp:127.0.0.1:2222-:22 \
     -device qemu-xhci \
     "${camera_args[@]}" \
     -cdrom "$IMAGE_DIR/$ISO_NAME" \
@@ -378,7 +379,7 @@ QEMU_BASE_CMD=(qemu-system-x86_64
   -drive file="$IMAGE_DIR/$DISK_NAME",if=virtio,format=qcow2
   -display gtk
   -vga qxl
-  -nic user,model=virtio
+  -nic user,model=virtio,hostfwd=tcp:127.0.0.1:2222-:22
   -device qemu-xhci
 )
 
