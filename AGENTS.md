@@ -10,6 +10,7 @@
 - `neugaze-core` is the shared camera/config/DBus/detection library; DBus proxy/types are generated from `neugaze-core/src/dbus.rs` with `zbus` macros.
 - `neugaze-pam` is a `cdylib` PAM module; shared PAM FFI/auth logic is in `neugaze-pam-core`.
 - `neugaze-gui` is the GTK4/libadwaita app; `gnome-shell-extension/` contains the GNOME Shell extension source.
+- VS Code workspace launch/settings are kept in `neugaze.code-workspace`; do not add/rely on a separate `.vscode/launch.json` for repo-local configuration.
 
 ## Commands
 
