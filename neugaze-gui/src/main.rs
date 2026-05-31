@@ -10,10 +10,10 @@ fn check_cpu_support() {
     {
         if !std::arch::is_x86_feature_detected!("avx") {
             eprintln!(
-                "neugaze-gui requires an x86_64 CPU with AVX support.\n"
-                    "The current host does not expose AVX, so the native image-processing path cannot run.\n\n"
-                    "If you are on a virtual machine, enable AVX support for the guest.\n"
-                    "If you are on real hardware, use a CPU with AVX or build the project with a narrower instruction set."
+                "neugaze-gui requires an x86_64 CPU with AVX support.\n\
+                The current host does not expose AVX, so the native image-processing path cannot run.\n\n\
+                If you are on a virtual machine, enable AVX support for the guest.\n\
+                If you are on real hardware, use a CPU with AVX or build the project with a narrower instruction set."
             );
             std::process::exit(1);
         }
