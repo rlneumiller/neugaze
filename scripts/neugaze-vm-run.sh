@@ -290,6 +290,7 @@ run_auto_install() {
   sudo qemu-system-x86_64 \
     -name "$VM_NAME" \
     -machine accel=kvm \
+    -cpu host \
     -smp "$VCPUS" \
     -m "$RAM" \
     -drive "file=$IMAGE_DIR/$DISK_NAME,if=virtio,format=qcow2" \
@@ -374,6 +375,7 @@ fi
 QEMU_BASE_CMD=(qemu-system-x86_64
   -name "$VM_NAME"
   -machine accel=kvm
+  -cpu host
   -smp "$VCPUS"
   -m "$RAM"
   -drive file="$IMAGE_DIR/$DISK_NAME",if=virtio,format=qcow2
